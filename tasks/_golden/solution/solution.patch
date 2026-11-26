@@ -1,0 +1,106 @@
+diff --git a/src/click/__init__.py b/src/click/__init__.py
+index a34ab02..61f8c42 100644
+--- a/src/click/__init__.py
++++ b/src/click/__init__.py
+@@ -56,6 +56,7 @@ from .termui import unstyle as unstyle
+ from .types import BOOL as BOOL
+ from .types import Choice as Choice
+ from .types import DateTime as DateTime
++from .types import Duration as Duration
+ from .types import File as File
+ from .types import FLOAT as FLOAT
+ from .types import FloatRange as FloatRange
+diff --git a/src/click/types.py b/src/click/types.py
+index b6e98a9..bebdb4a 100644
+--- a/src/click/types.py
++++ b/src/click/types.py
+@@ -8,7 +8,9 @@ import stat
+ import sys
+ import typing as t
+ import uuid
++import re
+ from datetime import datetime
++from datetime import timedelta
+ from gettext import gettext as _
+ from gettext import ngettext
+ 
+@@ -907,6 +909,79 @@ class UUIDParameterType(ParamType[uuid.UUID]):
+         return "UUID"
+ 
+ 
++class Duration(ParamType[timedelta]):
++    """Parses a duration such as ``90s`` or ``1h30m`` into a
++    :class:`datetime.timedelta`.
++
++    A duration is one or more ``<integer><unit>`` parts written without
++    spaces, with the units ``d`` (days), ``h`` (hours), ``m`` (minutes) and
++    ``s`` (seconds). Each unit may appear at most once and units must be
++    written from largest to smallest.
++
++    :param min: The shortest accepted duration, or ``None`` for no limit.
++    :param max: The longest accepted duration, or ``None`` for no limit.
++
++    .. versionadded:: 8.6
++    """
++
++    name = "duration"
++
++    _PATTERN = re.compile(r"(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?")
++
++    def __init__(self, min: timedelta | None = None, max: timedelta | None = None) -> None:
++        if min is not None and max is not None and min > max:
++            raise ValueError("min must not be greater than max")
++
++        self.min = min
++        self.max = max
++
++    def convert(
++        self, value: timedelta | str, param: Parameter | None, ctx: Context | None
++    ) -> timedelta:
++        if isinstance(value, timedelta):
++            result = value
++        else:
++            match = self._PATTERN.fullmatch(value) if value else None
++
++            if match is None:
++                self.fail(
++                    _(
++                        "{value!r} is not a valid duration. Use a combination"
++                        " like '1h30m' (units: d, h, m, s)."
++                    ).format(value=value),
++                    param,
++                    ctx,
++                )
++
++            days, hours, minutes, seconds = (int(g) if g else 0 for g in match.groups())
++            result = timedelta(
++                days=days, hours=hours, minutes=minutes, seconds=seconds
++            )
++
++        if self.min is not None and result < self.min:
++            self.fail(
++                _("{value!r} is shorter than the minimum duration of {limit}.").format(
++                    value=value, limit=self.min
++                ),
++                param,
++                ctx,
++            )
++
++        if self.max is not None and result > self.max:
++            self.fail(
++                _("{value!r} is longer than the maximum duration of {limit}.").format(
++                    value=value, limit=self.max
++                ),
++                param,
++                ctx,
++            )
++
++        return result
++
++    def __repr__(self) -> str:
++        return "Duration"
++
++
+ class FileInfoDict(ParamTypeInfoDict):
+     mode: str
+     encoding: str | None

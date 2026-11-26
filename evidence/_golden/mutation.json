@@ -1,0 +1,70 @@
+{
+ "runner": "local",
+ "kill_rate": 0.9,
+ "killed": 9,
+ "valid": 10,
+ "total": 10,
+ "mutants": [
+  {
+   "desc": "flip and to or: `if min is not None and max is not None and min > max:`",
+   "status": "killed",
+   "reward": 0.7391304347826086,
+   "note": ""
+  },
+  {
+   "desc": "change error message: `raise ValueError(\"min must not be greater than max\")`",
+   "status": "killed",
+   "reward": 0.9565217391304348,
+   "note": ""
+  },
+  {
+   "desc": "return None early: `return result`",
+   "status": "killed",
+   "reward": 0.5652173913043478,
+   "note": ""
+  },
+  {
+   "desc": "change constant 0->1: `days, hours, minutes, seconds = (int(g) if g else 0 for g in`",
+   "status": "killed",
+   "reward": 0.6086956521739131,
+   "note": ""
+  },
+  {
+   "desc": "flip and to or: `if self.min is not None and result < self.min:`",
+   "status": "killed",
+   "reward": 0.5652173913043478,
+   "note": ""
+  },
+  {
+   "desc": "flip and to or: `if self.max is not None and result > self.max:`",
+   "status": "killed",
+   "reward": 0.5652173913043478,
+   "note": ""
+  },
+  {
+   "desc": "return None early: `return \"Duration\"`",
+   "status": "survived",
+   "reward": 1.0,
+   "note": ""
+  },
+  {
+   "desc": "drop 'not': `if min is not None and max is not None and min > max:`",
+   "status": "killed",
+   "reward": 0.9130434782608695,
+   "note": ""
+  },
+  {
+   "desc": "drop 'not': `if self.max is not None and result > self.max:`",
+   "status": "killed",
+   "reward": 0.6086956521739131,
+   "note": ""
+  },
+  {
+   "desc": "boundary < to <=: `if self.min is not None and result < self.min:`",
+   "status": "killed",
+   "reward": 0.9565217391304348,
+   "note": ""
+  }
+ ],
+ "pass": true
+}

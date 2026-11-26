@@ -1,0 +1,33 @@
+# TaskForge run configuration. API keys are NEVER stored here (env vars only).
+repo_url: https://github.com/pallets/click.git
+tag: 8.5.1
+base_commit: cf19179e8e2fd54c601378cec9e0d21bb12b6fb1   # full 40-char hash of the tag
+work_dir: work/click
+package_dir: src/click
+tasks_dir: tasks
+evidence_dir: evidence
+n_tasks: 5
+max_retries: 3
+harbor_k: 1
+harbor_flags: ["-k", "{k}", "--no-delete", "-y"]   # appended after: harbor run -p <task> -a <agent> ... -o <dir>; fix here if your Harbor differs
+semantic_novelty: true      # LLM check that a feature does not already exist under another name
+harbor_enabled: true        # false = skip Harbor (dev on a machine without Docker)
+parallel_tasks: 2           # max Docker/Harbor jobs at once
+baseline_repeats: 3         # pytest runs used to drop flaky/skipped tests from pass_to_pass
+mutation_runner: local      # local (fast, git worktree) | harbor (slow, official)
+mutation_min_kill_rate: 0.8
+task_namespace: hedgeforge
+
+# ---- Models: change provider here and nothing else changes ----
+# provider: gemini | ollama | openai (any OpenAI-compatible: vLLM, Groq, OpenRouter...) | anthropic | mock
+models:
+  main:                      # proposer, spec, implementer, test author
+    provider: gemini
+    model: gemini-2.5-flash  # CHECK the current free model list in Google AI Studio
+    api_key_env: GEMINI_API_KEY
+    rpm: 8                   # self-throttle to stay under free-tier limits
+  critic:                    # MUST be a different model family from main
+    provider: ollama
+    model: qwen2.5-coder:7b
+    base_url: http://localhost:11434
+    rpm: 30

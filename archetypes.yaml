@@ -1,0 +1,38 @@
+# Five archetypes. Each task in a run must come from a different one.
+common_rules:
+  - Feature development only. No bug fixes, no refactors-only tasks.
+  - The whole change fits in one patch of roughly 40-300 changed lines.
+  - No network, no credentials, no security exploits, no randomness, no timing.
+  - Fully testable with click.testing.CliRunner or direct API calls.
+  - Must not already exist in click (any released version or main).
+archetypes:
+  - id: new_param_type
+    description: A new click.ParamType that converts and validates a command-line string.
+    rules:
+      - Public class exported from click/__init__.py.
+      - Defines exact accepted formats, return type and BadParameter messages.
+    example: "click.Duration: parse '90s' / '1h30m' into datetime.timedelta with min/max."
+  - id: new_command_behaviour
+    description: A new keyword/behaviour on Option, Argument, Command or Group.
+    rules:
+      - New keyword argument with a documented default that keeps old behaviour.
+      - Error text must name the options involved.
+    example: "Option(exclusive_with=[...]): options that cannot be used together."
+  - id: change_existing_behaviour
+    description: Change how an existing, documented behaviour works (opt-in or clearly specified).
+    rules:
+      - Spec states old behaviour and new behaviour explicitly.
+      - Existing tests must keep passing (use an opt-in flag if needed).
+    example: "Group help shows commands under named sections."
+  - id: feature_interaction
+    description: Two or more existing features interacting under a precedence rule.
+    rules:
+      - Spec states an explicit precedence order.
+      - Tests cover each pair of sources.
+    example: "config_option(): CLI > env var > config file > default."
+  - id: new_validation_rule
+    description: New validation on parameter values or counts, with help text integration.
+    rules:
+      - Exact error messages for each failure.
+      - Boundary values are stated in the spec.
+    example: "min_count / max_count for multiple=True options."

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -uo pipefail
+cd /app
+mkdir -p /logs/verifier
+# restore original tests in case the solver edited or added files under tests/
+git checkout {{ base_commit }} -- tests/
+git clean -fdq tests/
+cp /tests/test_feature.py tests/test_taskforge_feature.py
+python /tests/run_eval.py
