@@ -65,11 +65,11 @@ class Config(BaseModel):
 
 def load_config(path: str | Path = "config.yaml") -> Config:
     path = Path(path)
-    data = yaml.safe_load(path.read_text())
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
     cfg = Config(**data)
     cfg.root = path.resolve().parent
     return cfg
 
 
 def load_archetypes(path: str | Path = "archetypes.yaml") -> dict:
-    return yaml.safe_load(Path(path).read_text())
+    return yaml.safe_load(Path(path).read_text(encoding="utf-8"))

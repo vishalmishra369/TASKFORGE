@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..fsutil import write_lf
 from ..config import Config
 from ..gitutil import pytest_ids
 from ..jsonutil import extract_code
@@ -29,7 +30,7 @@ def write_tests(cfg: Config, instruction: str, feedback: str = "", tag: str = ""
 
 def feature_ids(wt: Path, test_code: str) -> tuple[list[str], dict[str, str], str]:
     """Run the feature file on the (patch-free) worktree. Returns (f2p ids, outcomes, output)."""
-    (wt / TARGET).write_text(test_code)
+    write_lf(wt / TARGET, test_code)
     res, out = pytest_ids(wt, [TARGET, "--continue-on-collection-errors"])
     ids = sorted(i for i in res if i.startswith(TARGET))
     return ids, res, out

@@ -63,13 +63,13 @@ def check_existing(c: dict, repo: Path, repo_map: dict, check_upstream: bool = T
         if n[0].isupper():
             return n in api["classes"]
         return n in api["functions"] or n in kw or ("_" in n and n in api["methods"])
-    src_text = "\n".join(p.read_text(errors="ignore") for p in (repo / repo_map["package_dir"]).glob("*.py"))
+    src_text = "\n".join(p.read_text(encoding="utf-8", errors="ignore") for p in (repo / repo_map["package_dir"]).glob("*.py"))
     docs_text = ""
     for cl in CHANGELOGS:
         if (repo / cl).exists():
-            docs_text += (repo / cl).read_text(errors="ignore")
+            docs_text += (repo / cl).read_text(encoding="utf-8", errors="ignore")
     if (repo / "docs").exists():
-        docs_text += "\n".join(p.read_text(errors="ignore") for p in (repo / "docs").rglob("*.md"))
+        docs_text += "\n".join(p.read_text(encoding="utf-8", errors="ignore") for p in (repo / "docs").rglob("*.md"))
     for n in names:
         if in_api(n):
             reasons.append(f"'{n}' already in click public API / signatures")
@@ -113,10 +113,10 @@ def evidence_lines(c: dict, repo: Path, package_dir: str = "src/click", limit: i
         + [repo / n for n in CHANGELOGS if (repo / n).exists()]
     hits: list[str] = []
     for f in files:
-        for i, line in enumerate(f.read_text(errors="ignore").splitlines(), 1):
+        for i, line in enumerate(f.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
             low = line.lower()
             if any(k in low for k in kws):
-                hits.append(f"{f.relative_to(repo)}:{i}: {line.strip()[:160]}")
+                hits.append(f"{f.relative_to(repo).as_posix()}:{i}: {line.strip()[:160]}")
                 if len(hits) >= limit * 4:
                     break
     # prefer lines matching several keywords

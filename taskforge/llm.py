@@ -204,7 +204,7 @@ def call_llm(role: str, system: str, user: str, model: ModelCfg, json_mode: bool
             "response": text, "tokens_in": tin, "tokens_out": tout,
             "latency_s": round(time.time() - t0, 2),
         }
-        with _LOCK, open(_RUN_DIR / "llm_log.jsonl", "a") as f:
+        with _LOCK, open(_RUN_DIR / "llm_log.jsonl", "a", encoding="utf-8") as f:
             f.write(json.dumps(rec) + "\n")
     return text
 

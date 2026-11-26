@@ -14,6 +14,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
+from .fsutil import write_lf
 from .config import Config
 from .gitutil import run
 
@@ -42,7 +43,7 @@ def clone_and_pin(cfg: Config) -> Path:
 
 
 def _report_ids(path: Path) -> dict[str, str]:
-    rep = json.loads(path.read_text())
+    rep = json.loads(path.read_text(encoding="utf-8"))
     return {t["nodeid"]: t["outcome"] for t in rep.get("tests", [])}
 
 
@@ -79,7 +80,7 @@ def run_baseline(cfg: Config, run_dir: Path, use_docker: bool = True) -> dict:
     if use_docker:
         envdir = run_dir / "baseline_env"
         envdir.mkdir(exist_ok=True)
-        (envdir / "Dockerfile").write_text(render_dockerfile(cfg))
+        write_lf(envdir / "Dockerfile", render_dockerfile(cfg))
         image = f"taskforge-baseline:{cfg.base_commit[:12]}"
         run(["docker", "build", "-t", image, str(envdir)], check=True, timeout=3600)
     if not use_docker:
@@ -99,7 +100,7 @@ def run_baseline(cfg: Config, run_dir: Path, use_docker: bool = True) -> dict:
         raise RuntimeError(
             f"baseline: no test passed in all {len(results)} runs, so nothing was written. Look at "
             f"{run_dir}/baseline_run1.json or run `pytest -x tests` inside the repo to see why.")
-    (run_dir / "baseline_tests.json").write_text(json.dumps(stable, indent=1))
-    (run_dir / "baseline_excluded.json").write_text(json.dumps(excluded, indent=1))
-    (run_dir / "baseline_summary.json").write_text(json.dumps(summary, indent=1))
+    write_lf(run_dir / "baseline_tests.json", json.dumps(stable, indent=1))
+    write_lf(run_dir / "baseline_excluded.json", json.dumps(excluded, indent=1))
+    write_lf(run_dir / "baseline_summary.json", json.dumps(summary, indent=1))
     return summary

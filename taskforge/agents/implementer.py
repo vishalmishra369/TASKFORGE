@@ -5,6 +5,7 @@ import ast
 import json
 from pathlib import Path
 
+from ..fsutil import write_lf
 from ..config import Config
 from ..gitutil import diff
 from ..jsonutil import extract_json
@@ -34,7 +35,7 @@ def _read_context(wt: Path, paths: list[str], limit: int = 60000) -> str:
     for rel in dict.fromkeys(paths + ["src/click/__init__.py"]):
         f = wt / rel
         if f.is_file() and f.suffix == ".py":
-            t = f.read_text()
+            t = f.read_text(encoding="utf-8")
             if used + len(t) > limit:
                 t = t[: max(0, limit - used)]
             used += len(t)
@@ -51,21 +52,21 @@ def apply_edits(wt: Path, data: dict) -> str | None:
         f = wt / rel
         if not f.is_file():
             return f"edit target missing: {rel}"
-        t = f.read_text()
+        t = f.read_text(encoding="utf-8")
         if t.count(e["search"]) != 1:
             return f"search text in {rel} matches {t.count(e['search'])} times (need exactly 1): {e['search'][:120]!r}"
-        f.write_text(t.replace(e["search"], e["replace"]))
+        write_lf(f, t.replace(e["search"], e["replace"]))
     for nf in data.get("new_files", []):
         rel = nf["path"]
         if rel.startswith("tests/") or rel.startswith("/"):
             return f"new file refused: {rel}"
         p = wt / rel
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(nf["content"])
+        write_lf(p, nf["content"])
     for f in {e["path"] for e in data.get("edits", [])} | {n["path"] for n in data.get("new_files", [])}:
         if f.endswith(".py"):
             try:
-                ast.parse((wt / f).read_text())
+                ast.parse((wt / f).read_text(encoding="utf-8"))
             except SyntaxError as ex:
                 return f"syntax error in {f}: {ex}"
     return None

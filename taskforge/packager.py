@@ -10,6 +10,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from . import __version__
+from .fsutil import copy_lf, write_lf
 from .config import Config
 
 TEMPLATES = Path(__file__).parent / "templates"
@@ -44,17 +45,17 @@ def package(cfg: Config, task_id: str, archetype: str, instruction: str, patch: 
     for d in ("environment", "solution", "tests"):
         (out / d).mkdir(parents=True)
     common = dict(repo_url=cfg.repo_url, base_commit=cfg.base_commit, tag=cfg.tag)
-    (out / "instruction.md").write_text(instruction)
-    (out / "task.toml").write_text(env.get_template("task.toml.j2").render(
+    write_lf(out / "instruction.md", instruction)
+    write_lf(out / "task.toml", env.get_template("task.toml.j2").render(
         **common, namespace=cfg.task_namespace, task_id=harbor_name(task_id), archetype=archetype, version=__version__))
-    (out / "environment/Dockerfile").write_text(env.get_template("Dockerfile.j2").render(**common))
-    (out / "solution/solution.patch").write_text(patch if patch.endswith("\n") else patch + "\n")
-    (out / "solution/solve.sh").write_text(env.get_template("solve.sh.j2").render())
-    (out / "tests/test.sh").write_text(env.get_template("test.sh.j2").render(**common))
-    shutil.copy(TEMPLATES / "run_eval.py", out / "tests/run_eval.py")
-    (out / "tests/test_feature.py").write_text(test_code)
-    (out / "tests/fail_to_pass.json").write_text(json.dumps(f2p, indent=1))
-    (out / "tests/pass_to_pass.json").write_text(json.dumps(p2p, indent=1))
+    write_lf(out / "environment/Dockerfile", env.get_template("Dockerfile.j2").render(**common))
+    write_lf(out / "solution/solution.patch", patch if patch.endswith("\n") else patch + "\n")
+    write_lf(out / "solution/solve.sh", env.get_template("solve.sh.j2").render())
+    write_lf(out / "tests/test.sh", env.get_template("test.sh.j2").render(**common))
+    copy_lf(TEMPLATES / "run_eval.py", out / "tests/run_eval.py")
+    write_lf(out / "tests/test_feature.py", test_code)
+    write_lf(out / "tests/fail_to_pass.json", json.dumps(f2p, indent=1))
+    write_lf(out / "tests/pass_to_pass.json", json.dumps(p2p, indent=1))
     for sh in (out / "solution/solve.sh", out / "tests/test.sh"):
         sh.chmod(0o755)
     return out

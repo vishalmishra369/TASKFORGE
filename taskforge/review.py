@@ -6,6 +6,8 @@ State lives in tasks/<id>/manifest.json under the key "review":
 """
 from __future__ import annotations
 
+from .fsutil import write_lf
+
 import hashlib
 import json
 import time
@@ -18,7 +20,7 @@ def _mpath(task_dir: Path) -> Path:
 
 def load_manifest(task_dir: Path) -> dict | None:
     try:
-        return json.loads(_mpath(task_dir).read_text())
+        return json.loads(_mpath(task_dir).read_text(encoding="utf-8"))
     except Exception:
         return None
 
@@ -52,7 +54,7 @@ def set_review(task_dir: Path, decision: str, by: str, note: str = "") -> None:
         raise FileNotFoundError(f"{task_dir.name} has no manifest.json (only generated tasks can be reviewed)")
     m["review"] = {"status": decision, "by": by, "note": note, "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
                    "hashes": content_hashes(task_dir)}
-    _mpath(task_dir).write_text(json.dumps(m, indent=1))
+    write_lf(_mpath(task_dir), json.dumps(m, indent=1))
 
 
 def review_card(task_dir: Path) -> str:

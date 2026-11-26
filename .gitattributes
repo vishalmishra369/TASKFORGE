@@ -1,0 +1,7 @@
+# Everything is text with LF line endings in the repo AND in working copies, also on Windows.
+# (Shell scripts, patches and Dockerfiles are executed inside Linux containers; CRLF breaks them.)
+* text=auto eol=lf
+*.sh text eol=lf
+*.patch text eol=lf
+Dockerfile text eol=lf
+*.zip binary

@@ -1,6 +1,8 @@
 """Small git + pytest helpers. Everything runs on a throwaway git worktree of click at base_commit."""
 from __future__ import annotations
 
+from .fsutil import write_lf
+
 import json
 import os
 import shutil
@@ -16,7 +18,7 @@ def run(cmd: list[str], cwd: str | Path | None = None, env: dict | None = None,
     e = os.environ.copy()
     if env:
         e.update(env)
-    p = subprocess.run(cmd, cwd=cwd, env=e, capture_output=True, text=True, timeout=timeout)
+    p = subprocess.run(cmd, cwd=cwd, env=e, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout)
     if check and p.returncode != 0:
         raise RuntimeError(f"{' '.join(cmd)} failed ({p.returncode}):\n{p.stdout[-2000:]}\n{p.stderr[-2000:]}")
     return p
@@ -37,7 +39,7 @@ def worktree(repo: Path, commit: str):
 
 def apply_patch(wt: Path, patch_text: str) -> tuple[bool, str]:
     pf = wt.parent / "p.patch"
-    pf.write_text(patch_text)
+    write_lf(pf, patch_text)
     p = run(["git", "apply", "--whitespace=nowarn", str(pf)], cwd=wt)
     return p.returncode == 0, (p.stderr or p.stdout).strip()
 
@@ -62,7 +64,7 @@ def pytest_ids(wt: Path, targets: list[str], extra_env: dict | None = None,
     p = run([sys.executable, "-m", "pytest", "-p", "no:cacheprovider", "-q",
              "--json-report", f"--json-report-file={out}", *targets], cwd=wt, env=env, timeout=timeout)
     try:
-        rep = json.loads(out.read_text())
+        rep = json.loads(out.read_text(encoding="utf-8"))
         res = {t["nodeid"]: t["outcome"] for t in rep.get("tests", [])}
         # collection errors show up as "collectors" with outcome failed
         for c in rep.get("collectors", []):

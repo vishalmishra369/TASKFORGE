@@ -10,6 +10,7 @@ import typer
 from rich.console import Console
 
 from . import llm
+from .fsutil import write_lf
 from .baseline import clone_and_pin, run_baseline
 from .config import load_config
 from . import review as rv
@@ -70,7 +71,7 @@ def validate(task: Optional[Path] = typer.Argument(None, help="tasks/<id>"), all
         mut = None
         if mutation:
             mut = mutate(cfg, d, cfg.p(cfg.work_dir))
-            (cfg.p(cfg.evidence_dir) / d.name / "mutation.json").write_text(json.dumps(mut, indent=1))
+            write_lf(cfg.p(cfg.evidence_dir) / d.name / "mutation.json", json.dumps(mut, indent=1))
             res["passed"] = res["passed"] and mut["pass"]
         write_validation_md(cfg.p(cfg.evidence_dir) / d.name, res, mut)
         console.print(f"{d.name}: {'[green]PASS[/]' if res['passed'] else '[red]FAIL[/]'}")
@@ -144,7 +145,7 @@ def harbor_probe(task: Path = typer.Argument(Path("tasks/_golden")), config: str
                    tree_text(out / agent, 60), "```", "console tail:", "```", log[-1500:], "```", ""]
         if reward is None:
             console.print(f"  reward not found. Folder tree:\n{tree_text(out / agent, 40)}\n  Console tail:\n{log[-800:]}")
-    (out / "PROBE_REPORT.md").write_text("\n".join(report))
+    write_lf(out / "PROBE_REPORT.md", "\n".join(report))
     console.print(f"report: {out / 'PROBE_REPORT.md'}")
     raise typer.Exit(code=0 if ok else 1)
 

@@ -1,6 +1,8 @@
 """Step 3: Repo Intelligence. Pure `ast` analysis of the package, cached per base_commit."""
 from __future__ import annotations
 
+from .fsutil import write_lf
+
 import ast
 import json
 from collections import Counter
@@ -113,7 +115,7 @@ def build_repo_map(repo: Path, package_dir: str = "src/click", tests_dir: str = 
     for mod, d in modules.items():
         names = {c["name"] for c in d["classes"]} | {f["name"] for f in d["functions"]}
         scored = sorted(((len(names & ident[tf]), tf) for tf in test_files), reverse=True)
-        test_map[mod] = [str(tf.relative_to(repo)) for s, tf in scored[:5] if s > 0]
+        test_map[mod] = [tf.relative_to(repo).as_posix() for s, tf in scored[:5] if s > 0]
     for tf in test_files:
         txt = tf.read_text(encoding="utf-8", errors="ignore")
         conv["CliRunner"] += txt.count("CliRunner") + txt.count("runner.invoke")
@@ -148,9 +150,9 @@ def load_or_build(repo: Path, base_commit: str, cache_dir: Path, **kw) -> dict:
     cache_dir.mkdir(parents=True, exist_ok=True)
     cf = cache_dir / f"repo_map_{base_commit}.json"
     if cf.exists():
-        return json.loads(cf.read_text())
+        return json.loads(cf.read_text(encoding="utf-8"))
     m = build_repo_map(repo, **kw)
-    cf.write_text(json.dumps(m, indent=1))
+    write_lf(cf, json.dumps(m, indent=1))
     return m
 
 

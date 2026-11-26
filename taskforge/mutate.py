@@ -16,6 +16,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from .fsutil import write_lf
 from .config import Config
 from .gitutil import apply_patch, pytest_ids, run, worktree
 from .validate import harbor
@@ -130,24 +131,24 @@ def _local_reward(repo: Path, base_commit: str, patch: str, test_code: str, f2p:
             r = run(["python", "-m", "py_compile", f], cwd=wt)
             if r.returncode != 0:
                 return None, f"does not compile: {f}"
-        (wt / "tests/test_taskforge_feature.py").write_text(test_code)
+        write_lf(wt / "tests/test_taskforge_feature.py", test_code)
         res, _ = pytest_ids(wt, ["tests", "--continue-on-collection-errors"])
         return reward_from(res, f2p, p2p), ""
 
 
 def mutate(cfg: Config, task_dir: Path, repo: Path, limit: int = 10, runner: str | None = None) -> dict:
     runner = runner or cfg.mutation_runner
-    patch = (task_dir / "solution/solution.patch").read_text()
-    test_code = (task_dir / "tests/test_feature.py").read_text()
-    f2p = json.loads((task_dir / "tests/fail_to_pass.json").read_text())
-    p2p = json.loads((task_dir / "tests/pass_to_pass.json").read_text())
+    patch = (task_dir / "solution/solution.patch").read_text(encoding="utf-8")
+    test_code = (task_dir / "tests/test_feature.py").read_text(encoding="utf-8")
+    f2p = json.loads((task_dir / "tests/fail_to_pass.json").read_text(encoding="utf-8"))
+    p2p = json.loads((task_dir / "tests/pass_to_pass.json").read_text(encoding="utf-8"))
     results = []
     for m in generate_mutants(patch, limit):
         if runner == "harbor":
             tmp = Path(tempfile.mkdtemp(prefix="tf_mut_"))
             td = tmp / task_dir.name
             shutil.copytree(task_dir, td)
-            (td / "solution/solution.patch").write_text(m["patch"])
+            write_lf(td / "solution/solution.patch", m["patch"])
             reward, _ = harbor(td, "oracle", tmp / "out", cfg.harbor_k, flags=cfg.harbor_flags)
             shutil.rmtree(tmp, ignore_errors=True)
             err = "" if reward is not None else "harbor crash"

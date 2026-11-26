@@ -17,9 +17,11 @@ def _cmd(args: list[str]) -> tuple[bool, str]:
         return False, f"{args[0]} not found on PATH"
     try:
         p = run(args, timeout=60)
-    except Exception as ex:  # timeout etc.
-        return False, str(ex)
-    return p.returncode == 0, (p.stdout or p.stderr).strip().splitlines()[0][:120] if (p.stdout or p.stderr) else ""
+    except Exception as ex:  # timeout, permission, etc.
+        return False, str(ex)[:120]
+    text = (p.stdout or "").strip() or (p.stderr or "").strip()
+    first = text.splitlines()[0][:120] if text else ""   # empty / whitespace-only output is normal on Windows
+    return p.returncode == 0, first
 
 
 def _ollama_models(base: str) -> list[str] | None:
@@ -33,6 +35,9 @@ def _ollama_models(base: str) -> list[str] | None:
 def run_checks(cfg: Config) -> list[tuple[str, bool, str]]:
     out: list[tuple[str, bool, str]] = []
     out.append(("python >= 3.10", sys.version_info >= (3, 10), sys.version.split()[0]))
+    if os.name == "nt":
+        out.append(("platform", True, "Windows: unit tests, review and export work here; run the full pipeline "
+                                       "(`taskforge run`, Docker, Harbor) inside WSL2"))
     ok, d = _cmd(["git", "--version"])
     out.append(("git", ok, d))
     ok, d = _cmd(["docker", "info", "--format", "{{.ServerVersion}}"])

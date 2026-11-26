@@ -15,6 +15,7 @@ from rich.console import Console
 from rich.table import Table
 
 from . import llm
+from .fsutil import write_lf
 from .agents import critic, implementer, proposer, spec_writer, test_author
 from .baseline import run_baseline
 from .config import Config, load_archetypes
@@ -61,7 +62,7 @@ def attempt_task(cfg: Config, run_dir: Path, repo: Path, summary: str, baseline:
     def note(n: int, stage: str, msg: str) -> None:
         nonlocal last
         last = f"[try {n}] {stage}: {msg}"
-        with open(log, "a") as f:
+        with open(log, "a", encoding="utf-8") as f:
             f.write(json.dumps({"try": n, "stage": stage, "msg": msg[-2000:], "ts": time.time()}) + "\n")
         console.log(f"[yellow]{task_id} try {n} {stage} failed[/]: {msg[:200]}")
 
@@ -98,7 +99,7 @@ def attempt_task(cfg: Config, run_dir: Path, repo: Path, summary: str, baseline:
                 fb["impl"] = f"patch does not apply cleanly: {aerr}"
                 note(n, "oracle-apply", fb["impl"])
                 return None
-            (wt / test_author.TARGET).write_text(test_code)
+            write_lf(wt / test_author.TARGET, test_code)
             res, out = pytest_ids(wt, ["tests", "--continue-on-collection-errors"])
         if reward_from(res, f2p, p2p) < 1.0:
             failing = [t for t in f2p + p2p if res.get(t) != "passed"][:15]
@@ -107,7 +108,7 @@ def attempt_task(cfg: Config, run_dir: Path, repo: Path, summary: str, baseline:
             note(n, "oracle-local", fb["impl"])
             return None
         verdict = critic.review(cfg, spec, test_code, patch, tag=task_id)
-        (ev / "critic.json").write_text(json.dumps(verdict, indent=1))
+        write_lf(ev / "critic.json", json.dumps(verdict, indent=1))
         if not verdict["approve"]:
             fb["spec"] = fb["tests"] = "critic issues: " + "; ".join(verdict["issues"])
             note(n, "critic", fb["spec"])
@@ -123,9 +124,9 @@ def attempt_task(cfg: Config, run_dir: Path, repo: Path, summary: str, baseline:
                 note(n, "harbor", msg)
                 return None
         mut = mutate(cfg, task_dir, repo, runner=cfg.mutation_runner)
-        (ev / "mutation.json").write_text(json.dumps(mut, indent=1))
+        write_lf(ev / "mutation.json", json.dumps(mut, indent=1))
         write_validation_md(ev, val, mut)
-        (ev / "validation.json").write_text(json.dumps(val, indent=1))
+        write_lf(ev / "validation.json", json.dumps(val, indent=1))
         if not mut["pass"]:
             surv = [m["desc"] for m in mut["mutants"] if m["status"] == "survived"]
             fb["tests"] = f"mutants survived (add tests AND state the behaviour in the spec): {surv}"
@@ -143,7 +144,7 @@ def attempt_task(cfg: Config, run_dir: Path, repo: Path, summary: str, baseline:
             "f2p_count": len(f2p), "p2p_count": len(p2p), "retries": n - 1,
             "critic": verdict, "review": None, "run_id": run_dir.name, "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
         }
-        (task_dir / "manifest.json").write_text(json.dumps(manifest, indent=1))
+        write_lf(task_dir / "manifest.json", json.dumps(manifest, indent=1))
         return {"ok": True, "task_id": task_id, "manifest": manifest}
 
     for n in range(1, cfg.max_retries + 1):
@@ -182,17 +183,17 @@ def run_pipeline(cfg: Config, n_tasks: int | None = None, archetype_ids: list[st
     # 1-2. pin + baseline
     if baseline_from:
         (run_dir).mkdir(parents=True, exist_ok=True)
-        baseline = json.loads((baseline_from / "baseline_tests.json").read_text())
+        baseline = json.loads((baseline_from / "baseline_tests.json").read_text(encoding="utf-8"))
         from .baseline import clone_and_pin
         clone_and_pin(cfg)
     else:
         console.print("[cyan]baseline:[/] pin commit, build, run tests...")
         console.print(run_baseline(cfg, run_dir, use_docker=use_docker))
-        baseline = json.loads((run_dir / "baseline_tests.json").read_text())
+        baseline = json.loads((run_dir / "baseline_tests.json").read_text(encoding="utf-8"))
     repo = cfg.p(cfg.work_dir)
     # 3. repo intelligence
     rmap = load_or_build(repo, cfg.base_commit, cfg.p("work/cache"), package_dir=cfg.package_dir)
-    (run_dir / "repo_map.json").write_text(json.dumps(rmap, indent=1))
+    write_lf(run_dir / "repo_map.json", json.dumps(rmap, indent=1))
     summary = summarize_for_prompt(rmap)
     # 4-5. propose + novelty
     arch = load_archetypes(cfg.p("archetypes.yaml"))
@@ -206,7 +207,7 @@ def run_pipeline(cfg: Config, n_tasks: int | None = None, archetype_ids: list[st
             console.print(f"[red]proposer failed for {a['id']}:[/] {type(ex).__name__}: {ex}")
     kept, rejected = filter_and_rank(cands, repo, rmap, check_upstream=check_upstream,
                                      semantic_cfg=cfg if cfg.semantic_novelty else None)
-    (run_dir / "candidates.json").write_text(json.dumps({"kept": kept, "rejected": rejected}, indent=1))
+    write_lf(run_dir / "candidates.json", json.dumps({"kept": kept, "rejected": rejected}, indent=1))
     picks = best_per_archetype(kept)
     console.print(f"proposed {len(cands)}, kept {len(kept)}, rejected {len(rejected)}")
     for aid, lst in picks.items():
@@ -245,12 +246,12 @@ def _write_summary(cfg: Config, run_id: str, results: list[dict]) -> None:
         t.add_row(*row)
         rows.append("| " + " | ".join(row) + " |")
     console.print(t)
-    (ev / "summary.md").write_text(f"# Run {run_id}\n\n" + "\n".join(rows) + "\n")
-    with open(ev / "failures.md", "a") as f:
+    write_lf(ev / "summary.md", f"# Run {run_id}\n\n" + "\n".join(rows) + "\n")
+    with open(ev / "failures.md", "a", encoding="utf-8") as f:
         for r in fails:
             f.write(f"\n## Run {run_id}: archetype {r['archetype']} dropped\n")
             for x in r["failures"]:
                 f.write(f"- {x['candidate']}: {x['reason'][:600]}\n")
     fx = ev / "fixes.md"
     if not fx.exists():
-        fx.write_text("# Manual fixes log\n\nNo manual fixes.\n")
+        write_lf(fx, "# Manual fixes log\n\nNo manual fixes.\n")

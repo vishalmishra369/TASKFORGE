@@ -52,7 +52,7 @@ def test_package_layout(tmp_path):
     cfg = load_config("config.yaml")
     td = package(cfg, "click-x", "new_param_type", "# T", "diff\n", "def test_a(): pass\n",
                  ["tests/test_taskforge_feature.py::test_a"], ["tests/t.py::t"], out_root=tmp_path)
-    files = {str(p.relative_to(td)) for p in td.rglob("*") if p.is_file()}
+    files = {p.relative_to(td).as_posix() for p in td.rglob("*") if p.is_file()}
     assert files == {"instruction.md", "task.toml", "environment/Dockerfile", "solution/solve.sh",
                      "solution/solution.patch", "tests/test.sh", "tests/run_eval.py", "tests/test_feature.py",
                      "tests/fail_to_pass.json", "tests/pass_to_pass.json"}
@@ -60,3 +60,18 @@ def test_package_layout(tmp_path):
     assert f"git checkout {cfg.base_commit}" in (td / "environment/Dockerfile").read_text()
     assert json.loads((td / "tests/fail_to_pass.json").read_text()) == ["tests/test_taskforge_feature.py::test_a"]
     assert (td / "tests/test.sh").stat().st_mode & 0o111
+
+
+def test_package_files_use_lf_line_endings_and_utf8(tmp_path):
+    """Windows regression: CRLF in solve.sh/test.sh/patch breaks the Linux container and `git apply`."""
+    cfg = load_config("config.yaml")
+    td = package(cfg, "click-x", "new_param_type", "# T \u2713\n", "diff --git a/x b/x\n+line\n",
+                 "def test_a():\n    assert 'caf\u00e9'\n", ["tests/test_taskforge_feature.py::test_a"],
+                 ["tests/t.py::t"], out_root=tmp_path)
+    for f in td.rglob("*"):
+        if f.is_file():
+            data = f.read_bytes()
+            assert b"\r" not in data, f"{f.relative_to(td)} contains CR"
+            data.decode("utf-8")
+    assert (td / "tests/test.sh").read_bytes().startswith(b"#!/bin/bash\n")
+    assert "\u2713" in (td / "instruction.md").read_text(encoding="utf-8")
