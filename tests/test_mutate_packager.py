@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 from taskforge.config import load_config
@@ -59,7 +60,7 @@ def test_package_layout(tmp_path):
     assert cfg.base_commit in (td / "task.toml").read_text()
     assert f"git checkout {cfg.base_commit}" in (td / "environment/Dockerfile").read_text()
     assert json.loads((td / "tests/fail_to_pass.json").read_text()) == ["tests/test_taskforge_feature.py::test_a"]
-    assert (td / "tests/test.sh").stat().st_mode & 0o111
+    if os.name != "nt": assert (td / "tests/test.sh").stat().st_mode & 0o111
 
 
 def test_package_files_use_lf_line_endings_and_utf8(tmp_path):
