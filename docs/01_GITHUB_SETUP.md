@@ -28,7 +28,7 @@ Add a Project board (Todo / Doing / Review / Done).
 ## 5. Daily workflow for everyone
 ```bash
 git clone https://github.com/<owner>/taskforge.git && cd taskforge
-python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev,dashboard]"
+python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
 cp .env.example .env            # put YOUR key; .env is git-ignored
 git switch -c step5/critic-prompts       # one branch per task: stepN/short-name
 # ...work, run: pytest -q

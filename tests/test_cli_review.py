@@ -80,4 +80,4 @@ def test_generated_manifest_has_no_review_until_signed(proj):
 
 def test_doctor_runs_and_reports(proj):
     r = run(proj, "doctor")
-    assert "python >= 3.11" in r.output and r.exit_code in (0, 1)
+    assert "python >= 3.10" in r.output and r.exit_code in (0, 1)

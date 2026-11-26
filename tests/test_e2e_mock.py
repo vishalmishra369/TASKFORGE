@@ -19,6 +19,8 @@ pytestmark = pytest.mark.skipif(os.environ.get("TASKFORGE_E2E") != "1" or not (R
 
 
 def test_pipeline_end_to_end_with_mock(tmp_path):
+    base = json.loads((ROOT / "runs/baseline/baseline_tests.json").read_text())
+    assert len(base) > 1000, "baseline is empty or tiny: this test would pass vacuously"
     cfg = load_config(ROOT / "config.yaml")
     cfg.root = tmp_path
     shutil.copy(ROOT / "archetypes.yaml", tmp_path / "archetypes.yaml")

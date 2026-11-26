@@ -24,6 +24,7 @@ def test_baseline_keeps_only_tests_that_pass_every_run(monkeypatch, tmp_path):
     ])
     monkeypatch.setattr(B, "clone_and_pin", lambda c: tmp_path)
     monkeypatch.setattr(B, "_pytest_local", lambda wd, out: next(runs))
+    monkeypatch.setattr(B, "preflight_local", lambda wd: None)
     summary = B.run_baseline(cfg, tmp_path / "run", use_docker=False)
     assert json.loads((tmp_path / "run/baseline_tests.json").read_text()) == ["t::a"]
     excl = json.loads((tmp_path / "run/baseline_excluded.json").read_text())
@@ -49,3 +50,21 @@ def test_mutation_harbor_crash_is_invalid_not_killed(monkeypatch, tmp_path):
     monkeypatch.setattr(M, "harbor", lambda *a, **k: (None, "crash"))
     res = M.mutate(cfg, Path("tasks/_golden"), tmp_path, runner="harbor")
     assert res["valid"] == 0 and res["killed"] == 0 and not res["pass"]
+
+
+def test_baseline_never_writes_empty_list(monkeypatch, tmp_path):
+    import pytest
+    cfg = load_config("config.yaml")
+    monkeypatch.setattr(B, "clone_and_pin", lambda c: tmp_path)
+    monkeypatch.setattr(B, "_pytest_local", lambda wd, out: {})
+    monkeypatch.setattr(B, "preflight_local", lambda wd: None)
+    with pytest.raises(RuntimeError, match="nothing was written"):
+        B.run_baseline(cfg, tmp_path / "run", use_docker=False)
+    assert not (tmp_path / "run/baseline_tests.json").exists()
+
+
+def test_local_preflight_gives_actionable_message(monkeypatch, tmp_path):
+    import pytest
+    monkeypatch.setattr(B, "run", lambda *a, **k: type("P", (), {"returncode": 1})())
+    with pytest.raises(RuntimeError, match="pip install -e"):
+        B.preflight_local(tmp_path)

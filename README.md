@@ -5,10 +5,11 @@ feature-development task packages. **No validation, no package.**
 
 ## Quick start
 ```bash
-# prerequisites: Docker running, Python 3.11+, git
+# prerequisites: Docker running, Python 3.10+, git
 git clone <this repo> taskforge && cd taskforge
 python -m venv .venv && source .venv/bin/activate        # Windows: use WSL2, or .venv\Scripts\activate
-pip install -e ".[dev,dashboard]"
+pip install -e ".[dev]"                                  # core only (fast)
+pip install streamlit                                    # optional: dashboard (large download, install later)
 pip install "harbor==0.25.*" && harbor --help           # confirm the CLI
 cp .env.example .env && export $(grep -v '^#' .env | xargs)   # put GEMINI_API_KEY in .env first
 taskforge doctor                                         # python, git, Docker, Harbor, keys, Ollama: all OK
@@ -18,6 +19,10 @@ streamlit run dashboard/app.py                           # inspect results
 ```
 Expected runtime: set after the first full run (see TECHNICAL.md). The Gemini free tier is rate limited, so the
 first run is slow by design (`rpm` in config.yaml).
+
+Works on Python 3.10, 3.11 and 3.12 (tested on 3.10.20 and 3.12).
+No-Docker dev mode (e.g. plain Windows): `pip install -e <path-to-click-clone>` first, then
+`taskforge baseline --no-docker`. The default baseline runs in Docker and needs none of this.
 
 ## Commands
 | Command | What it does |

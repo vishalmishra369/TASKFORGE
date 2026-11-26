@@ -5,7 +5,7 @@ Work top to bottom. Each has the exact command, what "good" looks like, and wher
 
 ## 0. Everyone, 10 minutes
 ```bash
-pip install -e ".[dev,dashboard]" "harbor==0.25.*"
+pip install -e ".[dev]" "harbor==0.25.*"   # add: pip install streamlit  (optional dashboard)
 cp .env.example .env   # add GEMINI_API_KEY, then: export $(grep -v '^#' .env | xargs)
 taskforge doctor       # every line must say OK
 pytest -q              # all green (3 tests skip unless harbor/streamlit/click clone are present)

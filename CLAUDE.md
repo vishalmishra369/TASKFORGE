@@ -24,7 +24,7 @@ Critic (different model family, veto) -> Packager -> Validator (nop, oracle, x3 
 Failed gate -> error log goes back to the failing agent, max 3 tries, next-best candidate, then drop + log.
 
 ## Engineering rules
-- Python 3.11+, Typer CLI, Pydantic config, Jinja2 templates.
+- Python 3.10+, Typer CLI, Pydantic config, Jinja2 templates.
 - ALL LLM calls go through taskforge/llm.py (provider-agnostic: gemini | ollama | openai-compatible | anthropic | mock).
 - API keys only from env vars; never in files, logs or git history.
 - Same config + same commit = same pipeline steps. Unit tests never call real LLMs or the network.

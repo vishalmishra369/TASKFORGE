@@ -46,6 +46,18 @@ def _report_ids(path: Path) -> dict[str, str]:
     return {t["nodeid"]: t["outcome"] for t in rep.get("tests", [])}
 
 
+def preflight_local(wd: Path) -> None:
+    """Local (no-Docker) mode runs click's tests with THIS Python, so click must be installed here
+    (its tests read the package metadata). Docker mode does this inside the image."""
+    p = run([sys.executable, "-c", "import importlib.metadata as m; m.version('click')"],
+            cwd=wd, env={"PYTHONPATH": str(wd / "src")})
+    if p.returncode != 0:
+        raise RuntimeError(
+            "local baseline: click is not installed in this Python environment.\n"
+            f"Fix:  pip install -e \"{wd}\" pytest pytest-json-report\n"
+            "(or run the baseline in Docker, the default: `taskforge baseline`)")
+
+
 def _pytest_local(wd: Path, out: Path) -> dict[str, str]:
     run([sys.executable, "-m", "pytest", "-p", "no:cacheprovider", "-q", "--json-report",
          f"--json-report-file={out}", "tests"], cwd=wd, env={"PYTHONPATH": str(wd / "src")}, timeout=3600)
@@ -70,6 +82,8 @@ def run_baseline(cfg: Config, run_dir: Path, use_docker: bool = True) -> dict:
         (envdir / "Dockerfile").write_text(render_dockerfile(cfg))
         image = f"taskforge-baseline:{cfg.base_commit[:12]}"
         run(["docker", "build", "-t", image, str(envdir)], check=True, timeout=3600)
+    if not use_docker:
+        preflight_local(wd)
     for i in range(cfg.baseline_repeats):
         name = f"baseline_run{i + 1}.json"
         results.append(_pytest_docker(image, run_dir, name) if use_docker else _pytest_local(wd, run_dir / name))
@@ -81,9 +95,11 @@ def run_baseline(cfg: Config, run_dir: Path, use_docker: bool = True) -> dict:
         "runs": len(results), "total_seen": len(all_ids), "stable_passing": len(stable),
         "excluded": len(excluded),
     }
+    if not stable:
+        raise RuntimeError(
+            f"baseline: no test passed in all {len(results)} runs, so nothing was written. Look at "
+            f"{run_dir}/baseline_run1.json or run `pytest -x tests` inside the repo to see why.")
     (run_dir / "baseline_tests.json").write_text(json.dumps(stable, indent=1))
     (run_dir / "baseline_excluded.json").write_text(json.dumps(excluded, indent=1))
     (run_dir / "baseline_summary.json").write_text(json.dumps(summary, indent=1))
-    if not stable:
-        raise RuntimeError("baseline: no stable passing tests; environment is broken")
     return summary

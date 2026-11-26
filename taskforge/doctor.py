@@ -32,7 +32,7 @@ def _ollama_models(base: str) -> list[str] | None:
 
 def run_checks(cfg: Config) -> list[tuple[str, bool, str]]:
     out: list[tuple[str, bool, str]] = []
-    out.append(("python >= 3.11", sys.version_info >= (3, 11), sys.version.split()[0]))
+    out.append(("python >= 3.10", sys.version_info >= (3, 10), sys.version.split()[0]))
     ok, d = _cmd(["git", "--version"])
     out.append(("git", ok, d))
     ok, d = _cmd(["docker", "info", "--format", "{{.ServerVersion}}"])
